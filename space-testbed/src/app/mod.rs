@@ -1,14 +1,16 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+mod core;
 mod debug;
 mod input;
+mod utils;
 
 use anyhow::Result;
 use space_engine::Engine;
 use space_engine::logger::{LogLevel, Logger};
 use winit::application::ApplicationHandler;
-use winit::event::{DeviceEvent, DeviceId, WindowEvent};
+use winit::event::{DeviceEvent, DeviceId, KeyEvent, WindowEvent};
 use winit::event_loop::{ActiveEventLoop, ControlFlow};
 use winit::window::{CursorGrabMode, Fullscreen, Window, WindowId};
 
@@ -92,8 +94,8 @@ impl App {
         }
     }
 
-    fn update(&mut self) {
-        self.state.update(&self.keyboard_handler);
+    fn update(&mut self, elapsed: f32) {
+        self.state.update(elapsed, &self.keyboard_handler);
     }
 }
 
@@ -129,14 +131,16 @@ impl ApplicationHandler for App {
                 }
                 WindowEvent::KeyboardInput {
                     event: key_event, ..
-                } => {
+                } if matches!(key_event, KeyEvent {repeat: false, ..}) => {
                     let command = self.keyboard_handler.register_key(&key_event);
                     self.handle_command(&command);
                     let transition = self.state.handle_keyboard_command(&command);
                     self.apply_transition(transition)
                         .expect("Failed to apply transition");
                 }
-                WindowEvent::CursorMoved { .. } | WindowEvent::CursorLeft { .. } | WindowEvent::MouseInput { .. } => {
+                WindowEvent::CursorMoved { .. }
+                | WindowEvent::CursorLeft { .. }
+                | WindowEvent::MouseInput { .. } => {
                     let command = self.mouse_handler.handle_mouse_event(&event, &self.state);
                     let transition = self.state.handle_mouse_command(&command);
                     self.apply_transition(transition)
@@ -163,10 +167,9 @@ impl ApplicationHandler for App {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        if Instant::now() >= self.next_update_time {
-            self.update();
-            self.next_update_time += Duration::from_secs_f32(1.0 / TPS as f32);
-        }
+        let now = Instant::now();
+        self.update((now - self.next_update_time).as_secs_f32());
+        self.next_update_time = now;
 
         if let Some(fps_cap) = FPS_CAP {
             let target_frame = Duration::from_secs_f32(1.0 / fps_cap as f32);

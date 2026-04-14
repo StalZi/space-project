@@ -132,6 +132,7 @@ pub fn create_image_view(
     format: vk::Format,
     aspect_flags: vk::ImageAspectFlags,
 ) -> Result<vk::ImageView> {
+    println!("Creating image view - Format: {:?}, Aspect: {:?}", format, aspect_flags);
     let create_info = vk::ImageViewCreateInfo::default()
         .image(image)
         .view_type(vk::ImageViewType::TYPE_2D)
@@ -164,7 +165,7 @@ pub fn transition_image_layout(
     unsafe {
         let aspect_mask = if new_layout.layout == vk::ImageLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL
         {
-            vk::ImageAspectFlags::DEPTH | vk::ImageAspectFlags::STENCIL
+            vk::ImageAspectFlags::DEPTH
         } else {
             vk::ImageAspectFlags::COLOR
         };

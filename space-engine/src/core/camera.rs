@@ -5,8 +5,6 @@ use crate::utils::{Point3D, Rotation3D};
 pub struct Camera {
     pub position: Point3D,
     pub rotation: Rotation3D,
-    pub delta_move: Point3D,
-    pub moving: bool,
 }
 
 impl Camera {
@@ -14,8 +12,6 @@ impl Camera {
         Self {
             position,
             rotation,
-            delta_move: Point3D::default(),
-            moving: false,
         }
     }
 

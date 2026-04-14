@@ -17,9 +17,9 @@ pub fn generate_random_cubes(count: usize) -> Vec<Cube> {
                     rng.random_range(0.0..360.0),
                 )
                 .size(
-                    rng.random_range(0.5..2.0),
-                    rng.random_range(0.5..2.0),
-                    rng.random_range(0.5..2.0),
+                    rng.random_range(0.5..5.0),
+                    rng.random_range(0.5..5.0),
+                    rng.random_range(0.5..5.0),
                 )
                 .color(
                     rng.random_range(0..256),

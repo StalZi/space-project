@@ -1,13 +1,16 @@
 use enum_dispatch::enum_dispatch;
 use space_engine::core::camera::Camera;
+use space_engine::logger::{LogLevel, Logger};
 use space_engine::render::context::RenderingContext;
 use space_engine::render::scene::objects::Cube;
 use space_engine::render::ui::objects::UIObject;
-use space_engine::utils::{Point3D, Rotation3D};
+use space_engine::utils::Point3D;
 
+use crate::app::core::player::Player;
 use crate::app::debug::rand_cubes::generate_random_cubes;
 use crate::app::input::keyboard_handler::{KeyboardCommand, KeyboardHandler};
 use crate::app::input::mouse_handler::MouseCommand;
+use crate::app::utils::physics::PhysicsContext;
 
 #[enum_dispatch(EngineState)]
 #[derive(Debug)]
@@ -56,7 +59,7 @@ pub trait EngineState {
         }
     }
 
-    fn update(&mut self, _keyboard_handler: &KeyboardHandler) {}
+    fn update(&mut self, _elapsed: f32, _keyboard_handler: &KeyboardHandler) {}
 
     fn handle_keyboard_command(&mut self, _command: &KeyboardCommand) -> StateTransition {
         StateTransition::None
@@ -151,26 +154,32 @@ impl EngineState for MenuState {
 
 #[derive(Debug)]
 pub struct WorldState {
-    camera: Camera,
+    player: Player,
     ui_objects: Vec<UIObject>,
     cube_objects: Vec<Cube>,
+    logger: &'static Logger,
 }
 
 impl WorldState {
     pub fn new() -> Self {
+        let logger = Logger::get_logger();
         Self {
-            camera: Camera::new(
-                Point3D {
-                    x: 0.0,
-                    y: 0.0,
-                    z: 5.0,
+            logger,
+            player: Player {
+                camera: Camera::default(),
+                moving: false,
+                physics: PhysicsContext {
+                    mass: 3.0,
+                    force: Point3D::default(),
+                    acceleration: Point3D::default(),
+                    velocity: Point3D::default(),
+                    g: 9.81,
+                    kinetic_friction_coefficient: 0.0007,
+                    static_friction_coefficient: 0.005,
+                    stop_threshold: 0.001,
+                    master_speed_coefficient: 1.0,
                 },
-                Rotation3D {
-                    pitch: 0.0,
-                    yaw: 0.0,
-                    roll: 0.0,
-                },
-            ),
+            },
             ui_objects: vec![
                 UIObject::default()
                     .position(200.0, 500.0, 0.0)
@@ -197,13 +206,50 @@ impl EngineState for WorldState {
         Some(&self.cube_objects)
     }
     fn get_camera(&self) -> Option<&Camera> {
-        Some(&self.camera)
+        Some(&self.player.camera)
     }
 
-    fn update(&mut self, keyboard_handler: &KeyboardHandler) {
-        keyboard_handler.handle_keys(self.camera.rotation.yaw, &mut self.camera.delta_move);
-        self.camera.change_position(self.camera.delta_move);
-        self.camera.delta_move = Point3D::default();
+    fn update(&mut self, dt: f32, keyboard_handler: &KeyboardHandler) {
+        keyboard_handler.handle_movement(&mut self.player); // self.player.physics.force updated
+
+        let friction = if self.player.moving {
+            self.player.physics.kinetic_friction_coefficient
+                * self.player.physics.mass
+                * self.player.physics.g
+        } else {
+            self.player.physics.static_friction_coefficient
+                * self.player.physics.mass
+                * self.player.physics.g
+        };
+
+        self.player.physics.acceleration = self.player.physics.force / self.player.physics.mass;
+        self.player.physics.velocity += self.player.physics.acceleration * dt;
+        self.player
+            .physics
+            .velocity
+            .bring_closer_to_zero_by((self.player.physics.velocity * friction).abs());
+
+        //
+        //
+        // if !self.player.physics.force.close_to_zero_by(self.player.physics.stop_threshold) {
+        //     let friction = self.player.physics.kinetic_friction_coefficient * self.player.physics.mass * self.player.physics.g;
+        //     self.player.physics.acceleration = (self.player.physics.force - friction) / self.player.physics.mass;
+        // }
+
+        if self
+            .player
+            .physics
+            .velocity
+            .close_to_zero_by(self.player.physics.stop_threshold)
+        {
+            self.player.physics.velocity = Point3D::default();
+            self.player.moving = false;
+        } else {
+            self.player.moving = true;
+        }
+        let delta_move =
+            self.player.physics.velocity * self.player.physics.master_speed_coefficient;
+        self.player.camera.change_position(delta_move);
     }
 
     fn handle_keyboard_command(&mut self, command: &KeyboardCommand) -> StateTransition {
@@ -212,7 +258,7 @@ impl EngineState for WorldState {
                 return StateTransition::SwitchTo(GameState::from(MenuState::new()));
             }
             KeyboardCommand::MoveCamera(delta) => {
-                self.camera.change_position(*delta);
+                self.player.camera.change_position(*delta);
             }
             _ => {}
         };
@@ -221,7 +267,7 @@ impl EngineState for WorldState {
 
     fn handle_mouse_command(&mut self, command: &MouseCommand) -> StateTransition {
         if let MouseCommand::RotateCamera(delta) = command {
-            self.camera.change_rotation(*delta);
+            self.player.camera.change_rotation(*delta);
         };
         StateTransition::None
     }

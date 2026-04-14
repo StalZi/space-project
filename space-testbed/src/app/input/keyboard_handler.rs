@@ -5,6 +5,8 @@ use space_engine::utils::Point3D;
 use winit::event::{ElementState, KeyEvent};
 use winit::keyboard::{KeyCode, PhysicalKey};
 
+use crate::app::core::player::Player;
+
 pub enum KeyboardCommand {
     None,
     ToggleFullscreen,
@@ -91,21 +93,25 @@ impl KeyboardHandler {
             | KeyEvent {
                 physical_key: PhysicalKey::Code(KeyCode::KeyA),
                 state,
+                repeat: false,
                 ..
             }
             | KeyEvent {
                 physical_key: PhysicalKey::Code(KeyCode::KeyD),
                 state,
+                repeat: false,
                 ..
             }
             | KeyEvent {
                 physical_key: PhysicalKey::Code(KeyCode::Space),
                 state,
+                repeat: false,
                 ..
             }
             | KeyEvent {
                 physical_key: PhysicalKey::Code(KeyCode::ShiftLeft),
                 state,
+                repeat: false,
                 ..
             } => {
                 if let ElementState::Pressed = state {
@@ -119,30 +125,34 @@ impl KeyboardHandler {
         KeyboardCommand::None
     }
 
-    pub fn handle_keys(&self, yaw: f32, delta_move: &mut Point3D) {
+    pub fn handle_movement(&self, player: &mut Player) {
+        player.physics.force = Point3D::default();
+        if self.keys_pressed.is_empty() {
+            return;
+        }
         for key in self.keys_pressed.iter() {
             match key {
                 PhysicalKey::Code(KeyCode::KeyW) => {
-                    delta_move.x += yaw.to_radians().sin() * 0.1;
-                    delta_move.z -= yaw.to_radians().cos() * 0.1;
+                    player.physics.force.x += player.camera.rotation.yaw.to_radians().sin();
+                    player.physics.force.z -= player.camera.rotation.yaw.to_radians().cos();
                 }
                 PhysicalKey::Code(KeyCode::KeyS) => {
-                    delta_move.x -= yaw.to_radians().sin() * 0.1;
-                    delta_move.z += yaw.to_radians().cos() * 0.1;
+                    player.physics.force.x -= player.camera.rotation.yaw.to_radians().sin();
+                    player.physics.force.z += player.camera.rotation.yaw.to_radians().cos();
                 }
                 PhysicalKey::Code(KeyCode::KeyA) => {
-                    delta_move.x -= yaw.to_radians().cos() * 0.1;
-                    delta_move.z -= yaw.to_radians().sin() * 0.1;
+                    player.physics.force.x -= player.camera.rotation.yaw.to_radians().cos();
+                    player.physics.force.z -= player.camera.rotation.yaw.to_radians().sin();
                 }
                 PhysicalKey::Code(KeyCode::KeyD) => {
-                    delta_move.x += yaw.to_radians().cos() * 0.1;
-                    delta_move.z += yaw.to_radians().sin() * 0.1;
+                    player.physics.force.x += player.camera.rotation.yaw.to_radians().cos();
+                    player.physics.force.z += player.camera.rotation.yaw.to_radians().sin();
                 }
                 PhysicalKey::Code(KeyCode::Space) => {
-                    delta_move.y += 0.1;
+                    player.physics.force.y += 1.0;
                 }
                 PhysicalKey::Code(KeyCode::ShiftLeft) => {
-                    delta_move.y -= 0.1;
+                    player.physics.force.y -= 1.0;
                 }
                 _ => {}
             }
