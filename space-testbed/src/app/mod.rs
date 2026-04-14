@@ -20,17 +20,18 @@ use crate::app::state::{EngineState, GameState, MenuState, StateTransition};
 
 mod state;
 
-pub const FPS_CAP: Option<u32> = None;
 pub const TPS: u32 = 100;
 
 pub struct App {
+    fps_cap: Option<u32>,
+    mouse_sensitivity: f32,
+    keyboard_handler: KeyboardHandler,
+    mouse_handler: MouseHandler,
+    next_redraw_time: Instant,
+    next_update_time: Instant,
     state: GameState,
     engine: Option<Engine>,
     logger: &'static Logger,
-    next_redraw_time: Instant,
-    keyboard_handler: KeyboardHandler,
-    mouse_handler: MouseHandler,
-    next_update_time: Instant,
 }
 
 impl App {
@@ -42,6 +43,10 @@ impl App {
 
         let state = GameState::from(MenuState::new());
 
+
+        let fps_cap = None;
+        let mouse_sensitivity = 0.1;
+
         Self {
             keyboard_handler,
             mouse_handler,
@@ -50,6 +55,8 @@ impl App {
             logger,
             next_redraw_time: Instant::now(),
             next_update_time: Instant::now(),
+            fps_cap,
+            mouse_sensitivity,
         }
     }
 
@@ -158,7 +165,7 @@ impl ApplicationHandler for App {
         event: DeviceEvent,
     ) {
         if let DeviceEvent::MouseMotion { delta } = event {
-            let command = self.mouse_handler.handle_motion_event(delta, &self.state);
+            let command = self.mouse_handler.handle_motion_event(delta, self.mouse_sensitivity, &self.state);
             let transition = self.state.handle_mouse_command(&command);
             self.apply_transition(transition)
                 .expect("Failed to apply transition");
@@ -171,7 +178,7 @@ impl ApplicationHandler for App {
         self.update((now - self.next_update_time).as_secs_f32());
         self.next_update_time = now;
 
-        if let Some(fps_cap) = FPS_CAP {
+        if let Some(fps_cap) = self.fps_cap {
             let target_frame = Duration::from_secs_f32(1.0 / fps_cap as f32);
             let now = Instant::now();
 

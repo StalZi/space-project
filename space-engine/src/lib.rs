@@ -48,6 +48,11 @@ impl Engine {
             LogLevel::Success,
         );
 
+        logger.log(
+            "====== Initializing the window renderer ======",
+            LogLevel::Info,
+        );
+        let start = Instant::now();
         let window_renderer = WindowRenderer::new(
             context.clone(),
             window.clone(),
@@ -58,6 +63,14 @@ impl Engine {
             },
             ui_buffer_capacity,
         )?;
+        let duration = start.elapsed();
+        logger.log(
+            format!(
+                "====== Window renderer Initialized successfully in {}s ======",
+                duration.as_secs_f32()
+            ),
+            LogLevel::Success,
+        );
 
         Ok(Self {
             window_renderer,

@@ -12,6 +12,7 @@ gpu-allocator = { version = "0.28.0", default-features = false, features = [
     "vulkan",
 ] }
 winit = "0.30"
+enable-ansi-support = "0.3.1"
 
 [build-dependencies]
 copy_to_output = "2.2.0"

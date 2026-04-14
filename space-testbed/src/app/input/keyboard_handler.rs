@@ -62,7 +62,7 @@ impl KeyboardHandler {
                     "released"
                 }
             ),
-            LogLevel::Verbose,
+            LogLevel::Keyboard,
         );
         match event {
             KeyEvent {
@@ -126,33 +126,41 @@ impl KeyboardHandler {
     }
 
     pub fn handle_movement(&self, player: &mut Player) {
-        player.physics.force = Point3D::default();
+        player.physics.direction_reference = Point3D::default();
         if self.keys_pressed.is_empty() {
             return;
         }
         for key in self.keys_pressed.iter() {
             match key {
                 PhysicalKey::Code(KeyCode::KeyW) => {
-                    player.physics.force.x += player.camera.rotation.yaw.to_radians().sin();
-                    player.physics.force.z -= player.camera.rotation.yaw.to_radians().cos();
+                    player.physics.direction_reference.x +=
+                        player.camera.rotation.yaw.to_radians().sin();
+                    player.physics.direction_reference.z -=
+                        player.camera.rotation.yaw.to_radians().cos();
                 }
                 PhysicalKey::Code(KeyCode::KeyS) => {
-                    player.physics.force.x -= player.camera.rotation.yaw.to_radians().sin();
-                    player.physics.force.z += player.camera.rotation.yaw.to_radians().cos();
+                    player.physics.direction_reference.x -=
+                        player.camera.rotation.yaw.to_radians().sin();
+                    player.physics.direction_reference.z +=
+                        player.camera.rotation.yaw.to_radians().cos();
                 }
                 PhysicalKey::Code(KeyCode::KeyA) => {
-                    player.physics.force.x -= player.camera.rotation.yaw.to_radians().cos();
-                    player.physics.force.z -= player.camera.rotation.yaw.to_radians().sin();
+                    player.physics.direction_reference.x -=
+                        player.camera.rotation.yaw.to_radians().cos();
+                    player.physics.direction_reference.z -=
+                        player.camera.rotation.yaw.to_radians().sin();
                 }
                 PhysicalKey::Code(KeyCode::KeyD) => {
-                    player.physics.force.x += player.camera.rotation.yaw.to_radians().cos();
-                    player.physics.force.z += player.camera.rotation.yaw.to_radians().sin();
+                    player.physics.direction_reference.x +=
+                        player.camera.rotation.yaw.to_radians().cos();
+                    player.physics.direction_reference.z +=
+                        player.camera.rotation.yaw.to_radians().sin();
                 }
                 PhysicalKey::Code(KeyCode::Space) => {
-                    player.physics.force.y += 1.0;
+                    player.physics.direction_reference.y += 1.0;
                 }
                 PhysicalKey::Code(KeyCode::ShiftLeft) => {
-                    player.physics.force.y -= 1.0;
+                    player.physics.direction_reference.y -= 1.0;
                 }
                 _ => {}
             }

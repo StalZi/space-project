@@ -42,12 +42,12 @@ impl MouseHandler {
         }
     }
 
-    pub fn handle_motion_event(&mut self, delta: (f64, f64), state: &GameState) -> MouseCommand {
+    pub fn handle_motion_event(&mut self, delta: (f64, f64), mouse_sensitivity: f32, state: &GameState) -> MouseCommand {
         match state {
             GameState::MenuState(_) => MouseCommand::None,
             GameState::WorldState(_) => MouseCommand::RotateCamera(Rotation3D {
-                pitch: delta.1 as f32 * 0.1,
-                yaw: delta.0 as f32 * 0.1,
+                pitch: delta.1 as f32 * mouse_sensitivity,
+                yaw: delta.0 as f32 * mouse_sensitivity,
                 roll: 0.0,
             }),
         }

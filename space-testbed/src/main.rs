@@ -8,12 +8,14 @@ use winit::event_loop::EventLoop;
 
 use space_engine::logger::{Logger};
 
+const LOG: bool = true;
+const LOG_VERBOSE: bool = true;
+const LOG_KEYBOARD: bool = true;
+const LOG_MOUSE: bool = true;
+const LOG_PHYSICS: bool = true;
+
 fn main() {
-    if cfg!(debug_assertions) {
-        Logger::create(true, true);
-    } else {
-        Logger::create(false, false);
-    }
+    Logger::create(LOG, LOG_VERBOSE, LOG_KEYBOARD, LOG_MOUSE, LOG_PHYSICS);
 
     let event_loop = EventLoop::new().unwrap();
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);

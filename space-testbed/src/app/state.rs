@@ -170,14 +170,14 @@ impl WorldState {
                 moving: false,
                 physics: PhysicsContext {
                     mass: 3.0,
-                    force: Point3D::default(),
+                    direction_reference: Point3D::default(),
+                    force: 100.0,
                     acceleration: Point3D::default(),
                     velocity: Point3D::default(),
                     g: 9.81,
-                    kinetic_friction_coefficient: 0.0007,
-                    static_friction_coefficient: 0.005,
+                    kinetic_friction_coefficient: 0.07,
+                    static_friction_coefficient: 0.1,
                     stop_threshold: 0.001,
-                    master_speed_coefficient: 1.0,
                 },
             },
             ui_objects: vec![
@@ -216,25 +216,21 @@ impl EngineState for WorldState {
             self.player.physics.kinetic_friction_coefficient
                 * self.player.physics.mass
                 * self.player.physics.g
+                * dt
         } else {
             self.player.physics.static_friction_coefficient
                 * self.player.physics.mass
                 * self.player.physics.g
+                * dt
         };
 
-        self.player.physics.acceleration = self.player.physics.force / self.player.physics.mass;
+        let force_vector = self.player.physics.direction_reference * self.player.physics.force;
+        self.player.physics.acceleration = force_vector / self.player.physics.mass;
         self.player.physics.velocity += self.player.physics.acceleration * dt;
         self.player
             .physics
             .velocity
             .bring_closer_to_zero_by((self.player.physics.velocity * friction).abs());
-
-        //
-        //
-        // if !self.player.physics.force.close_to_zero_by(self.player.physics.stop_threshold) {
-        //     let friction = self.player.physics.kinetic_friction_coefficient * self.player.physics.mass * self.player.physics.g;
-        //     self.player.physics.acceleration = (self.player.physics.force - friction) / self.player.physics.mass;
-        // }
 
         if self
             .player
@@ -247,8 +243,11 @@ impl EngineState for WorldState {
         } else {
             self.player.moving = true;
         }
-        let delta_move =
-            self.player.physics.velocity * self.player.physics.master_speed_coefficient;
+        self.logger.log(
+            format!("Player Velocity: {:?}", self.player.physics.velocity),
+            LogLevel::Physics,
+        );
+        let delta_move = self.player.physics.velocity * dt;
         self.player.camera.change_position(delta_move);
     }
 

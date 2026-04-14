@@ -132,7 +132,6 @@ pub fn create_image_view(
     format: vk::Format,
     aspect_flags: vk::ImageAspectFlags,
 ) -> Result<vk::ImageView> {
-    println!("Creating image view - Format: {:?}, Aspect: {:?}", format, aspect_flags);
     let create_info = vk::ImageViewCreateInfo::default()
         .image(image)
         .view_type(vk::ImageViewType::TYPE_2D)
