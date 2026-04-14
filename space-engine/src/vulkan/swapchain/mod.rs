@@ -138,7 +138,7 @@ impl EngineSwapchain {
                 .destroy_swapchain(self.handle, None)
         };
 
-        // Creating a new swapchaing and its image views.
+        // Creating a new swapchain and its image views.
         self.handle = new_swapchain;
 
         let new_images = unsafe {

@@ -55,10 +55,11 @@ pub fn begin_rendering(
                         },
                     })
                     .load_op(vk::AttachmentLoadOp::CLEAR)
-                    .store_op(vk::AttachmentStoreOp::STORE),
+                    .store_op(vk::AttachmentStoreOp::STORE)
             );
 
-            rendering_info = rendering_info.depth_attachment(depth_attachment_storage.as_ref().unwrap());
+            rendering_info =
+                rendering_info.depth_attachment(depth_attachment_storage.as_ref().unwrap());
         }
 
         device.cmd_begin_rendering(command_buffer, &rendering_info)

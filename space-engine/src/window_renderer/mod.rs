@@ -33,7 +33,9 @@ impl WindowRenderer {
     ) -> Result<Self> {
         let mut swapchain = EngineSwapchain::new(context.clone(), window.clone())
             .expect("Failed to create swapchain for renderer");
-        swapchain.resize(window.inner_size()).expect("Failed to fill the swapchain");
+        swapchain
+            .resize(window.inner_size())
+            .expect("Failed to fill the swapchain");
 
         let allocator = Allocator::new(&AllocatorCreateDesc {
             instance: context.instance.clone(),
@@ -117,8 +119,12 @@ impl WindowRenderer {
                     .flags(vk::CommandBufferUsageFlags::ONE_TIME_SUBMIT),
             )?;
 
-            self.renderer
-                .render(*command_buffer, self.clear_color, self.frame_index, rendering_context)?;
+            self.renderer.render(
+                *command_buffer,
+                self.clear_color,
+                self.frame_index,
+                rendering_context,
+            )?;
 
             let render_target = &self.renderer.render_targets[self.frame_index];
 
@@ -166,7 +172,7 @@ impl WindowRenderer {
                 .device
                 .handle
                 .end_command_buffer(*command_buffer)?;
-            // sumbit the command buffer
+            // submit the command buffer
             self.context.device.handle.queue_submit2(
                 self.context.device.queues[self.context.device.qfs.graphics.index as usize],
                 &[vk::SubmitInfo2KHR::default()

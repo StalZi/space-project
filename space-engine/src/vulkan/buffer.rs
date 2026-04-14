@@ -61,8 +61,8 @@ pub fn ensure_buffer_capacity<T>(
         memory_location,
         name,
     )?;
-
     unsafe {
+        device.device_wait_idle()?;
         device.destroy_buffer(*buffer, None);
     }
 

@@ -1,6 +1,5 @@
-use ash::{Device, vk};
-
 use anyhow::Result;
+use ash::{Device, vk};
 
 pub fn create_graphics_pipeline(
     device: &Device,
@@ -8,7 +7,8 @@ pub fn create_graphics_pipeline(
     fragment_shader: vk::ShaderModule,
     extent: vk::Extent2D,
     format: vk::Format,
-    depth_format: Option<vk::Format>,
+    depth_format: vk::Format,
+    depth_enabled: bool,
     pipeline_layout: vk::PipelineLayout,
     pipeline_cache: vk::PipelineCache,
     topology: vk::PrimitiveTopology,
@@ -32,8 +32,7 @@ pub fn create_graphics_pipeline(
                 ])
                 .vertex_input_state(&vk::PipelineVertexInputStateCreateInfo::default())
                 .input_assembly_state(
-                    &vk::PipelineInputAssemblyStateCreateInfo::default()
-                        .topology(topology),
+                    &vk::PipelineInputAssemblyStateCreateInfo::default().topology(topology),
                 )
                 .viewport_state(
                     &vk::PipelineViewportStateCreateInfo::default()
@@ -60,8 +59,8 @@ pub fn create_graphics_pipeline(
                 )
                 .depth_stencil_state(
                     &vk::PipelineDepthStencilStateCreateInfo::default()
-                        .depth_test_enable(true)
-                        .depth_write_enable(true)
+                        .depth_test_enable(depth_enabled)
+                        .depth_write_enable(depth_enabled)
                         .depth_compare_op(vk::CompareOp::LESS)
                         .depth_bounds_test_enable(false)
                         .stencil_test_enable(false),
@@ -87,7 +86,8 @@ pub fn create_graphics_pipeline(
                 .push_next(
                     &mut vk::PipelineRenderingCreateInfoKHR::default()
                         .color_attachment_formats(&[format])
-                        .depth_attachment_format(depth_format.unwrap_or(vk::Format::UNDEFINED)),
+                        .depth_attachment_format(depth_format)
+                        .stencil_attachment_format(vk::Format::UNDEFINED),
                 )],
             None,
         )
