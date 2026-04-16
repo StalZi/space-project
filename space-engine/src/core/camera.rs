@@ -22,7 +22,7 @@ impl Camera {
     }
 
     pub fn change_rotation(&mut self, delta: Rotation3D) {
-        self.rotation.pitch = wrap_angle(self.rotation.pitch + delta.pitch);
+        self.rotation.pitch = (self.rotation.pitch + delta.pitch).clamp(-90.0, 90.0);
         self.rotation.yaw = wrap_angle(self.rotation.yaw + delta.yaw);
         self.rotation.roll = wrap_angle(self.rotation.roll + delta.roll);
     }
