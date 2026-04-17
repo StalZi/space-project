@@ -9,10 +9,7 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(position: Point3D, rotation: Rotation3D) -> Self {
-        Self {
-            position,
-            rotation,
-        }
+        Self { position, rotation }
     }
 
     pub fn change_position(&mut self, delta: Point3D) {

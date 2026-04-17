@@ -1,6 +1,5 @@
 use space_engine::utils::Point3D;
 
-
 #[derive(Debug)]
 pub struct PhysicsContext {
     pub mass: f32,

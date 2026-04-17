@@ -1,29 +1,27 @@
+use std::collections::HashMap;
 use std::mem::size_of;
 use std::sync::Arc;
 
 use anyhow::Result;
+use ash::vk;
 
 use crate::core::camera::Camera;
 use crate::logger::{LogLevel, Logger};
-use crate::utils::math::IDENTITY4;
-
-pub mod objects;
-use ash::vk;
-use gpu_allocator::vulkan::Allocator;
-use objects::Cube;
-
+use crate::resources::MeshesInfo;
 use crate::resources::shader::load_shader_module;
+use crate::utils::MeshState;
 use crate::utils::image_utils::EngineImage;
+use crate::utils::math::IDENTITY4;
 use crate::vulkan::VulkanContext;
 use crate::vulkan::pipeline::create_graphics_pipeline;
 
-const SHADERS_DIR: &str = "res/shaders/scene/compiled";
+const SHADERS_DIR: &str = "res/shaders/scene/mesh/compiled";
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 struct ScenePushConstants {
     mvp: [[f32; 4]; 4],
-    color: [f32; 4],
+    vertex_buffer_address: vk::DeviceAddress,
 }
 
 pub struct SceneRenderer {
@@ -38,7 +36,6 @@ impl SceneRenderer {
         context: Arc<VulkanContext>,
         resolution: (u32, u32),
         format: vk::Format,
-        _allocator: &mut Allocator,
     ) -> Result<Self> {
         let logger = Logger::get_logger();
 
@@ -126,7 +123,8 @@ impl SceneRenderer {
         &self,
         command_buffer: vk::CommandBuffer,
         render_target: &EngineImage,
-        cube_objects: &[Cube],
+        meshes_info: &MeshesInfo,
+        mesh_states: &HashMap<String, Vec<MeshState>>,
         camera: Option<&Camera>,
     ) -> Result<()> {
         let aspect = render_target.attributes.extent.width as f32
@@ -135,8 +133,8 @@ impl SceneRenderer {
 
         let view = if let Some(camera) = camera {
             let translate_camera =
-                translate(-camera.position.x, camera.position.y, -camera.position.z);
-            let rx = rotate_x((camera.rotation.pitch).to_radians());
+                translate(-camera.position.x, -camera.position.y, -camera.position.z);
+            let rx = rotate_x((-camera.rotation.pitch).to_radians());
             let ry = rotate_y((-camera.rotation.yaw).to_radians());
             let rz = rotate_z((-camera.rotation.roll).to_radians());
             let rotation_camera = mul_mat4(rx, mul_mat4(ry, rz));
@@ -171,47 +169,57 @@ impl SceneRenderer {
                 self.pipeline,
             );
 
-            for cube in cube_objects {
-                let model = build_model_matrix(cube);
-                let mvp = mul_mat4(projection, mul_mat4(view, model));
-                let push_constants = ScenePushConstants {
-                    mvp,
-                    color: [
-                        cube.color.r as f32 / 255.0,
-                        cube.color.g as f32 / 255.0,
-                        cube.color.b as f32 / 255.0,
-                        cube.color.a as f32 / 255.0,
-                    ],
-                };
+            for mesh in meshes_info.meshes.values() {
+                if let Some(mesh_states) = mesh_states.get(&mesh.name) {
+                    for mesh_state in mesh_states {
+                        let model = build_model_matrix(mesh_state);
+                        let mvp = mul_mat4(projection, mul_mat4(view, model));
+                        let mvp = transpose(mvp);
+                        let push_constants = ScenePushConstants {
+                            mvp,
+                            vertex_buffer_address: mesh.buffers.vertex_buffer_address,
+                        };
 
-                self.context.device.handle.cmd_push_constants(
-                    command_buffer,
-                    self.pipeline_layout,
-                    vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT,
-                    0,
-                    std::slice::from_raw_parts(
-                        (&push_constants as *const ScenePushConstants) as *const u8,
-                        size_of::<ScenePushConstants>(),
-                    ),
-                );
+                        self.context.device.handle.cmd_push_constants(
+                            command_buffer,
+                            self.pipeline_layout,
+                            vk::ShaderStageFlags::VERTEX | vk::ShaderStageFlags::FRAGMENT,
+                            0,
+                            std::slice::from_raw_parts(
+                                (&push_constants as *const ScenePushConstants) as *const u8,
+                                size_of::<ScenePushConstants>(),
+                            ),
+                        );
+                        self.context.device.handle.cmd_bind_index_buffer(
+                            command_buffer,
+                            mesh.buffers.index_buffer.buffer,
+                            0,
+                            vk::IndexType::UINT32,
+                        );
 
-                self.context
-                    .device
-                    .handle
-                    .cmd_draw(command_buffer, 36, 1, 0, 0);
+                        self.context.device.handle.cmd_draw_indexed(
+                            command_buffer,
+                            mesh.surfaces[0].count,
+                            1,
+                            mesh.surfaces[0].start_index,
+                            0,
+                            0,
+                        );
+                    }
+                }
             }
         }
         Ok(())
     }
 }
 
-fn build_model_matrix(cube: &Cube) -> [[f32; 4]; 4] {
-    let scale_matrix = scale(cube.size.x, cube.size.y, cube.size.z);
-    let rx = rotate_x(cube.rotation.yaw.to_radians());
-    let ry = rotate_y(cube.rotation.pitch.to_radians());
-    let rz = rotate_z(cube.rotation.roll.to_radians());
+fn build_model_matrix(mesh: &MeshState) -> [[f32; 4]; 4] {
+    let scale_matrix = scale(mesh.size.width, mesh.size.height, mesh.size.depth);
+    let rx = rotate_x(mesh.rotation.yaw.to_radians());
+    let ry = rotate_y(mesh.rotation.pitch.to_radians());
+    let rz = rotate_z(mesh.rotation.roll.to_radians());
     let rotation = mul_mat4(rz, mul_mat4(ry, rx));
-    let translation = translate(cube.position.x, cube.position.y, cube.position.z);
+    let translation = translate(mesh.position.x, mesh.position.y, mesh.position.z);
     mul_mat4(translation, mul_mat4(rotation, scale_matrix))
 }
 
@@ -280,11 +288,20 @@ fn perspective(fov_y: f32, aspect: f32, near: f32, far: f32) -> [[f32; 4]; 4] {
     let f = 1.0 / (fov_y / 2.0).tan();
     let mut m = [[0.0; 4]; 4];
     m[0][0] = f / aspect;
-    m[1][1] = f;
+    m[1][1] = -f;
     m[2][2] = far / (near - far);
     m[2][3] = (far * near) / (near - far);
     m[3][2] = -1.0;
     m
+}
+
+fn transpose(m: [[f32; 4]; 4]) -> [[f32; 4]; 4] {
+    [
+        [m[0][0], m[1][0], m[2][0], m[3][0]],
+        [m[0][1], m[1][1], m[2][1], m[3][1]],
+        [m[0][2], m[1][2], m[2][2], m[3][2]],
+        [m[0][3], m[1][3], m[2][3], m[3][3]],
+    ]
 }
 
 impl Drop for SceneRenderer {

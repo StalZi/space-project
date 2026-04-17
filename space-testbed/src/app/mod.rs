@@ -31,6 +31,7 @@ pub struct App {
     next_update_time: Instant,
     state: GameState,
     engine: Option<Engine>,
+    window: Option<Arc<Window>>,
     logger: &'static Logger,
 }
 
@@ -43,7 +44,6 @@ impl App {
 
         let state = GameState::from(MenuState::new());
 
-
         let fps_cap = None;
         let mouse_sensitivity = 0.1;
 
@@ -52,6 +52,7 @@ impl App {
             mouse_handler,
             state,
             engine: None,
+            window: None,
             logger,
             next_redraw_time: Instant::now(),
             next_update_time: Instant::now(),
@@ -112,9 +113,12 @@ impl ApplicationHandler for App {
 
         let window_attributes = Window::default_attributes().with_title("Space Game");
 
-        let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
+        self.window = Some(Arc::new(
+            event_loop.create_window(window_attributes).unwrap(),
+        ));
 
-        self.engine = Some(Engine::new(window, self.state.ui_capacity()).unwrap());
+        self.engine =
+            Some(Engine::new(self.window.clone().unwrap(), self.state.ui_capacity()).unwrap());
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _: WindowId, event: WindowEvent) {
@@ -125,10 +129,7 @@ impl ApplicationHandler for App {
                     event_loop.exit();
                 }
                 WindowEvent::RedrawRequested => {
-                    engine
-                        .window_renderer
-                        .render(&self.state.get_context())
-                        .expect("Failed to draw the renderer");
+                    engine.request_redraw(self.state.get_context());
                 }
                 WindowEvent::Resized(_) => {
                     engine.window_renderer.resize().unwrap();
@@ -138,7 +139,7 @@ impl ApplicationHandler for App {
                 }
                 WindowEvent::KeyboardInput {
                     event: key_event, ..
-                } if matches!(key_event, KeyEvent {repeat: false, ..}) => {
+                } if matches!(key_event, KeyEvent { repeat: false, .. }) => {
                     let command = self.keyboard_handler.register_key(&key_event);
                     self.handle_command(&command);
                     let transition = self.state.handle_keyboard_command(&command);
@@ -165,11 +166,12 @@ impl ApplicationHandler for App {
         event: DeviceEvent,
     ) {
         if let DeviceEvent::MouseMotion { delta } = event {
-            let command = self.mouse_handler.handle_motion_event(delta, self.mouse_sensitivity, &self.state);
+            let command =
+                self.mouse_handler
+                    .handle_motion_event(delta, self.mouse_sensitivity, &self.state);
             let transition = self.state.handle_mouse_command(&command);
             self.apply_transition(transition)
                 .expect("Failed to apply transition");
-            //self.logger.log(format!("Camera {:?}", self.state.get_camera().unwrap_or(&(Camera::default()))), LogLevel::Verbose);
         }
     }
 
@@ -177,24 +179,21 @@ impl ApplicationHandler for App {
         let now = Instant::now();
         self.update((now - self.next_update_time).as_secs_f32());
         self.next_update_time = now;
+        if let Some(window) = self.window.as_ref() {
+            if let Some(fps_cap) = self.fps_cap {
+                let target_frame = Duration::from_secs_f32(1.0 / fps_cap as f32);
+                let now = Instant::now();
 
-        if let Some(fps_cap) = self.fps_cap {
-            let target_frame = Duration::from_secs_f32(1.0 / fps_cap as f32);
-            let now = Instant::now();
-
-            if now >= self.next_redraw_time {
-                if let Some(engine) = self.engine.as_mut() {
-                    engine.request_redraw();
+                if now >= self.next_redraw_time {
+                    window.request_redraw();
+                    while self.next_redraw_time <= now {
+                        self.next_redraw_time += target_frame;
+                    }
                 }
-                while self.next_redraw_time <= now {
-                    self.next_redraw_time += target_frame;
-                }
-            }
 
-            event_loop.set_control_flow(ControlFlow::WaitUntil(self.next_redraw_time));
-        } else {
-            if let Some(engine) = self.engine.as_mut() {
-                engine.request_redraw();
+                event_loop.set_control_flow(ControlFlow::WaitUntil(self.next_redraw_time));
+            } else {
+                window.request_redraw();
             }
         }
     }

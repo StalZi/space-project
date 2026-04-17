@@ -1,18 +1,14 @@
 use crate::logger::{LogLevel, Logger};
 
 pub mod phys_device;
-use phys_device::EnginePhysicalDevice;
-use phys_device::queue_family::*;
-
 use std::collections::HashSet;
 use std::ffi::CStr;
 
 use anyhow::Result;
-
 use ash::khr::surface;
-use ash::{Device, Instance};
-use ash::{Entry, vk};
-
+use ash::{Device, Entry, Instance, vk};
+use phys_device::EnginePhysicalDevice;
+use phys_device::queue_family::*;
 use winit::raw_window_handle::{RawDisplayHandle, RawWindowHandle};
 
 pub struct EngineDevice {
@@ -42,7 +38,7 @@ impl EngineDevice {
             phys_device,
         )?;
 
-        let queue_family_indicies = HashSet::from([
+        let queue_family_indices = HashSet::from([
             qfs.graphics.index,
             qfs.present.index,
             qfs.compute.index,
@@ -51,7 +47,7 @@ impl EngineDevice {
 
         // let features = phys_device.features;
 
-        let queue_create_infos = queue_family_indicies
+        let queue_create_infos = queue_family_indices
             .iter()
             .map(|&index| {
                 vk::DeviceQueueCreateInfo::default()
@@ -84,7 +80,7 @@ impl EngineDevice {
         let handle =
             unsafe { instance.create_device(phys_device.handle, &device_create_info, None)? };
 
-        let queues = queue_family_indicies
+        let queues = queue_family_indices
             .iter()
             .map(|index| unsafe {
                 handle

@@ -1,4 +1,7 @@
+use std::collections::HashMap;
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+
+use crate::core::camera::Camera;
 
 pub mod image_utils;
 pub mod math;
@@ -9,6 +12,22 @@ pub struct Point2D {
     pub y: i32,
 }
 
+#[repr(C)]
+#[derive(Default, Clone, Copy, Debug)]
+pub struct PointUV {
+    pub u: f32,
+    pub v: f32,
+}
+impl PointUV {
+    pub fn from_arr(arr: [f32; 2]) -> Self {
+        Self {
+            u: arr[0],
+            v: arr[1],
+        }
+    }
+}
+
+#[repr(C)]
 #[derive(Default, Clone, Copy, Debug)]
 pub struct Point3D {
     pub x: f32,
@@ -16,6 +35,13 @@ pub struct Point3D {
     pub z: f32,
 }
 impl Point3D {
+    pub fn from_arr(arr: [f32; 3]) -> Self {
+        Self {
+            x: arr[0],
+            y: arr[1],
+            z: arr[2],
+        }
+    }
     pub fn close_to_zero_by(&self, by: f32) -> bool {
         self.x.abs() < by && self.y.abs() < by && self.z.abs() < by
     }
@@ -193,25 +219,156 @@ pub struct Rotation3D {
     pub roll: f32,
 }
 
+#[repr(C)]
 #[derive(Default, Clone, Copy, Debug)]
 pub struct ColorRGBA {
-    pub r: u32,
-    pub g: u32,
-    pub b: u32,
-    pub a: u32,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
+    pub a: f32,
 }
 
 impl ColorRGBA {
-    pub fn change_by(&mut self, dr: u32, dg: u32, db: u32, da: u32) {
-        self.r = (self.r + dr).clamp(0, 255);
-        self.g = (self.g + dg).clamp(0, 255);
-        self.b = (self.b + db).clamp(0, 255);
-        self.a = (self.a + da).clamp(0, 255);
+    pub fn from_arr(arr: [f32; 4]) -> Self {
+        Self {
+            r: arr[0],
+            g: arr[1],
+            b: arr[2],
+            a: arr[3],
+        }
+    }
+    pub fn change_by(&mut self, dr: f32, dg: f32, db: f32, da: f32) {
+        self.r = (self.r + dr).clamp(0.0, 255.0);
+        self.g = (self.g + dg).clamp(0.0, 255.0);
+        self.b = (self.b + db).clamp(0.0, 255.0);
+        self.a = (self.a + da).clamp(0.0, 255.0);
     }
 }
 
 #[derive(Default, Clone, Copy, Debug)]
-pub struct Size {
+pub struct Size2D {
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Size3D {
+    pub width: f32,
+    pub height: f32,
+    pub depth: f32,
+}
+impl Default for Size3D {
+    fn default() -> Self {
+        Self {
+            width: 1.0,
+            height: 1.0,
+            depth: 1.0,
+        }
+    }
+}
+#[derive(Default, Debug)]
+pub struct Cube {
+    pub position: Point3D,
+    pub rotation: Rotation3D,
+    pub size: Point3D,
+    pub color: ColorRGBA,
+}
+
+impl Cube {
+    pub fn position(mut self, x: f32, y: f32, z: f32) -> Self {
+        self.position = Point3D { x, y, z };
+        self
+    }
+    pub fn rotation(mut self, pitch: f32, yaw: f32, roll: f32) -> Self {
+        self.rotation = Rotation3D { pitch, yaw, roll };
+        self
+    }
+    pub fn size(mut self, x: f32, y: f32, z: f32) -> Self {
+        self.size = Point3D { x, y, z };
+        self
+    }
+    pub fn color(mut self, r: f32, g: f32, b: f32, a: f32) -> Self {
+        self.color = ColorRGBA { r, g, b, a };
+        self
+    }
+}
+#[derive(Default, Debug, Clone)]
+pub struct UIObject {
+    pub position: Point3D,
+    pub size: Size2D,
+    pub bg_color: ColorRGBA,
+}
+
+impl UIObject {
+    pub fn position(mut self, x: f32, y: f32, z: f32) -> Self {
+        self.position = Point3D { x, y, z };
+        self
+    }
+
+    pub fn size(mut self, width: u32, height: u32) -> Self {
+        self.size = Size2D { width, height };
+        self
+    }
+
+    pub fn bg_color(mut self, r: f32, g: f32, b: f32, a: f32) -> Self {
+        self.bg_color = ColorRGBA { r, g, b, a };
+        self
+    }
+
+    pub fn hover(&mut self, is_hovered: bool) {
+        if is_hovered {
+            self.size = Size2D {
+                width: self.size.width + 20,
+                height: self.size.height + 20,
+            };
+            self.position = Point3D {
+                x: self.position.x - 10.0,
+                y: self.position.y - 10.0,
+                z: self.position.z + 1.0,
+            };
+        } else {
+            self.size = Size2D {
+                width: self.size.width - 20,
+                height: self.size.height - 20,
+            };
+            self.position = Point3D {
+                x: self.position.x + 10.0,
+                y: self.position.y + 10.0,
+                z: self.position.z - 1.0,
+            };
+        }
+    }
+}
+
+pub struct RenderingContext<'a> {
+    pub camera: Option<&'a Camera>,
+    pub cubes: Option<&'a [Cube]>,
+    pub ui_objects: Option<Vec<UIObject>>,
+    pub meshes_path: Option<&'a String>,
+    pub mesh_states: Option<&'a HashMap<String, Vec<MeshState>>>,
+}
+
+#[derive(Default, Clone, Copy, Debug)]
+pub struct MeshState {
+    pub position: Point3D,
+    pub rotation: Rotation3D,
+    pub size: Size3D,
+}
+impl MeshState {
+    pub fn position(mut self, x: f32, y: f32, z: f32) -> Self {
+        self.position = Point3D { x, y, z };
+        self
+    }
+    pub fn rotation(mut self, pitch: f32, yaw: f32, roll: f32) -> Self {
+        self.rotation = Rotation3D { pitch, yaw, roll };
+        self
+    }
+    pub fn size(mut self, width: f32, height: f32, depth: f32) -> Self {
+        self.size = Size3D {
+            width,
+            height,
+            depth,
+        };
+        self
+    }
 }

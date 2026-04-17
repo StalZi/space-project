@@ -1,11 +1,9 @@
 use crate::logger::{LogLevel, Logger};
 
 pub mod queue_family;
-use queue_family::EngineQueueFamily;
-
 use anyhow::Result;
-
 use ash::{Instance, vk};
+use queue_family::EngineQueueFamily;
 
 pub struct EnginePhysicalDevice {
     pub handle: vk::PhysicalDevice,
@@ -34,7 +32,6 @@ impl EnginePhysicalDevice {
             })
             .collect();
 
-        
         logger.log(
             format!(
                 "Physical device name: {:?}",
@@ -48,9 +45,15 @@ impl EnginePhysicalDevice {
             LogLevel::Verbose,
         );
 
-        logger.log(format!("Queue family properties: {:?}", queue_family_properties), LogLevel::Verbose);
+        logger.log(
+            format!("Queue family properties: {:?}", queue_family_properties),
+            LogLevel::Verbose,
+        );
 
-        logger.log(format!("Memory properties: {:?}", memory_properties), LogLevel::Verbose);
+        logger.log(
+            format!("Memory properties: {:?}", memory_properties),
+            LogLevel::Verbose,
+        );
 
         logger.log(
             format!(

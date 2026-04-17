@@ -1,14 +1,11 @@
 mod surface;
-use surface::EngineSurface;
-
-use anyhow::Result;
-
-use winit::dpi::PhysicalSize;
-use winit::window::Window;
-
 use std::sync::Arc;
 
+use anyhow::Result;
 use ash::vk;
+use surface::EngineSurface;
+use winit::dpi::PhysicalSize;
+use winit::window::Window;
 
 use crate::utils::image_utils::create_image_view;
 use crate::vulkan::VulkanContext;

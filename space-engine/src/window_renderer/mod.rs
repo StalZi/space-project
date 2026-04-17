@@ -7,7 +7,8 @@ use gpu_allocator::{AllocationSizes, AllocatorDebugSettings};
 use winit::window::Window;
 
 use crate::render::GameRenderer;
-use crate::render::context::RenderingContext;
+use crate::resources::ResourceManager;
+use crate::utils::RenderingContext;
 use crate::utils::image_utils::{ImageLayoutState, blit_image, transition_image_layout};
 use crate::vulkan::VulkanContext;
 use crate::vulkan::swapchain::EngineSwapchain;
@@ -71,7 +72,11 @@ impl WindowRenderer {
         Ok(())
     }
 
-    pub fn render(&mut self, rendering_context: &RenderingContext) -> Result<()> {
+    pub fn render(
+        &mut self,
+        rendering_context: RenderingContext,
+        resource_manager: &mut ResourceManager,
+    ) -> Result<()> {
         unsafe {
             self.context.device.handle.wait_for_fences(
                 &[self.swapchain.images[self.frame_index].in_flight_fence],
@@ -124,6 +129,7 @@ impl WindowRenderer {
                 self.clear_color,
                 self.frame_index,
                 rendering_context,
+                resource_manager,
             )?;
 
             let render_target = &self.renderer.render_targets[self.frame_index];

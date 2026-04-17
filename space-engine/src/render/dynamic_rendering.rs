@@ -55,7 +55,7 @@ pub fn begin_rendering(
                         },
                     })
                     .load_op(vk::AttachmentLoadOp::CLEAR)
-                    .store_op(vk::AttachmentStoreOp::STORE)
+                    .store_op(vk::AttachmentStoreOp::STORE),
             );
 
             rendering_info =

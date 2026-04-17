@@ -1,5 +1,5 @@
-use ash::{Device, vk};
 use anyhow::Result;
+use ash::{Device, vk};
 
 pub fn create_descriptor_set_layout(
     device: &Device,

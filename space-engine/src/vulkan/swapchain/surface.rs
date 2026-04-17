@@ -1,10 +1,8 @@
-
-
-
-use ash::{Entry, Instance, khr::surface, vk};
-use winit::{raw_window_handle::{HasDisplayHandle, HasWindowHandle}, window::Window};
-
 use anyhow::Result;
+use ash::khr::surface;
+use ash::{Entry, Instance, vk};
+use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle};
+use winit::window::Window;
 
 pub struct EngineSurface {
     pub handle: vk::SurfaceKHR,
@@ -25,14 +23,8 @@ impl EngineSurface {
         let raw_window_handle = window.window_handle().unwrap().as_raw();
 
         let surface = unsafe {
-            ash_window::create_surface(
-                entry,
-                instance,
-                raw_display_handle,
-                raw_window_handle,
-                None,
-            )
-            .expect("Failed to create Vulkan Surface")
+            ash_window::create_surface(entry, instance, raw_display_handle, raw_window_handle, None)
+                .expect("Failed to create Vulkan Surface")
         };
 
         let capabilities = unsafe {

@@ -1,9 +1,7 @@
 use anyhow::Result;
 use ash::{Device, vk};
-use gpu_allocator::{
-    MemoryLocation,
-    vulkan::{Allocation, AllocationCreateDesc, AllocationScheme, Allocator},
-};
+use gpu_allocator::MemoryLocation;
+use gpu_allocator::vulkan::{Allocation, AllocationCreateDesc, AllocationScheme, Allocator};
 
 pub struct EngineImageAttributes {
     pub memory_location: MemoryLocation,
@@ -111,12 +109,7 @@ pub fn create_image(
 
     (unsafe { device.bind_image_memory(image, allocation.memory(), allocation.offset()) })?;
 
-    let view = create_image_view(
-        device,
-        image,
-        attributes.format,
-        attributes.aspect_flags,
-    )?;
+    let view = create_image_view(device, image, attributes.format, attributes.aspect_flags)?;
 
     Ok(EngineImage {
         handle: image,

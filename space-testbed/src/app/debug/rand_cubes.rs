@@ -1,5 +1,5 @@
 use rand::RngExt;
-use space_engine::render::scene::objects::Cube;
+use space_engine::utils::Cube;
 
 pub fn generate_random_cubes(count: usize) -> Vec<Cube> {
     let mut rng = rand::rng();
@@ -22,10 +22,10 @@ pub fn generate_random_cubes(count: usize) -> Vec<Cube> {
                     rng.random_range(0.5..5.0),
                 )
                 .color(
-                    rng.random_range(0..256),
-                    rng.random_range(0..256),
-                    rng.random_range(0..256),
-                    255,
+                    rng.random_range(0.0..=255.0),
+                    rng.random_range(0.0..=255.0),
+                    rng.random_range(0.0..=255.0),
+                    255.0,
                 )
         })
         .collect()

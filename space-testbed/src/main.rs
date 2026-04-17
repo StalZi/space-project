@@ -3,16 +3,14 @@
 
 mod app;
 use app::App;
-
+use space_engine::logger::Logger;
 use winit::event_loop::EventLoop;
-
-use space_engine::logger::{Logger};
 
 const LOG: bool = true;
 const LOG_VERBOSE: bool = true;
 const LOG_KEYBOARD: bool = true;
 const LOG_MOUSE: bool = true;
-const LOG_PHYSICS: bool = true;
+const LOG_PHYSICS: bool = false;
 
 fn main() {
     Logger::create(LOG, LOG_VERBOSE, LOG_KEYBOARD, LOG_MOUSE, LOG_PHYSICS);

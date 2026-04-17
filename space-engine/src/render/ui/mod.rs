@@ -1,17 +1,17 @@
-use crate::logger::{LogLevel, Logger};
-
-pub mod objects;
 use std::sync::Arc;
 
 use anyhow::Result;
 use ash::vk;
 use gpu_allocator::vulkan::Allocator;
-use objects::UIObject;
 
+use crate::logger::{LogLevel, Logger};
 use crate::resources::shader::load_shader_module;
+use crate::utils::UIObject;
 use crate::utils::image_utils::EngineImage;
 use crate::vulkan::VulkanContext;
-use crate::vulkan::buffer::{create_buffer, ensure_buffer_capacity, required_buffer_size};
+use crate::vulkan::buffer::{
+    AllocatedBuffer, create_buffer, ensure_buffer_capacity, required_buffer_size,
+};
 use crate::vulkan::descriptor::{
     allocate_descriptor_set, create_descriptor_pool, create_descriptor_set_layout,
     write_storage_buffer_descriptor,
@@ -31,9 +31,7 @@ pub struct UIRenderer {
     descriptor_set_layout: vk::DescriptorSetLayout,
     descriptor_pool: vk::DescriptorPool,
     descriptor_set: vk::DescriptorSet,
-    buffer: vk::Buffer,
-    buffer_allocation: gpu_allocator::vulkan::Allocation,
-    buffer_size: vk::DeviceSize,
+    allocated_buffer: AllocatedBuffer,
     pipeline: vk::Pipeline,
     pipeline_layout: vk::PipelineLayout,
     context: Arc<VulkanContext>,
@@ -149,7 +147,7 @@ impl UIRenderer {
 
         // Create buffer for UI objects data with the specified initial capacity.
         let buffer_size = required_buffer_size::<UIObjectData>(initial_ui_object_capacity);
-        let (buffer, allocation) = create_buffer(
+        let allocated_buffer = create_buffer(
             &context.device.handle,
             allocator,
             buffer_size,
@@ -163,7 +161,7 @@ impl UIRenderer {
             &context.device.handle,
             descriptor_set,
             0,
-            buffer,
+            allocated_buffer.buffer,
             0,
             vk::WHOLE_SIZE,
         );
@@ -175,9 +173,7 @@ impl UIRenderer {
             descriptor_set_layout,
             descriptor_pool,
             descriptor_set,
-            buffer,
-            buffer_allocation: allocation,
-            buffer_size,
+            allocated_buffer,
             logger,
         })
     }
@@ -186,9 +182,7 @@ impl UIRenderer {
         ensure_buffer_capacity::<UIObjectData>(
             &self.context.device.handle,
             allocator,
-            &mut self.buffer,
-            &mut self.buffer_allocation,
-            &mut self.buffer_size,
+            &mut self.allocated_buffer,
             capacity,
             vk::BufferUsageFlags::STORAGE_BUFFER | vk::BufferUsageFlags::SHADER_DEVICE_ADDRESS,
             gpu_allocator::MemoryLocation::CpuToGpu,
@@ -199,7 +193,7 @@ impl UIRenderer {
             &self.context.device.handle,
             self.descriptor_set,
             0,
-            self.buffer,
+            self.allocated_buffer.buffer,
             0,
             vk::WHOLE_SIZE,
         );
@@ -223,15 +217,20 @@ impl UIRenderer {
                     obj.size.height as f32,
                 ],
                 color: [
-                    obj.bg_color.r as f32 / 255.0,
-                    obj.bg_color.g as f32 / 255.0,
-                    obj.bg_color.b as f32 / 255.0,
-                    obj.bg_color.a as f32 / 255.0,
+                    obj.bg_color.r / 255.0,
+                    obj.bg_color.g / 255.0,
+                    obj.bg_color.b / 255.0,
+                    obj.bg_color.a / 255.0,
                 ],
             })
             .collect();
 
-        let mapped = self.buffer_allocation.mapped_ptr().unwrap().as_ptr() as *mut UIObjectData;
+        let mapped = self
+            .allocated_buffer
+            .allocation
+            .mapped_ptr()
+            .unwrap()
+            .as_ptr() as *mut UIObjectData;
         unsafe {
             std::ptr::copy_nonoverlapping(data.as_ptr(), mapped, data.len());
         }
@@ -319,7 +318,10 @@ impl Drop for UIRenderer {
                 .device
                 .handle
                 .destroy_descriptor_pool(self.descriptor_pool, None);
-            self.context.device.handle.destroy_buffer(self.buffer, None);
+            self.context
+                .device
+                .handle
+                .destroy_buffer(self.allocated_buffer.buffer, None);
         }
         // Allocation is dropped automatically
     }

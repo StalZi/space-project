@@ -1,13 +1,11 @@
+use std::collections::HashMap;
+
 use enum_dispatch::enum_dispatch;
 use space_engine::core::camera::Camera;
 use space_engine::logger::{LogLevel, Logger};
-use space_engine::render::context::RenderingContext;
-use space_engine::render::scene::objects::Cube;
-use space_engine::render::ui::objects::UIObject;
-use space_engine::utils::Point3D;
+use space_engine::utils::{Cube, MeshState, Point3D, RenderingContext, UIObject};
 
 use crate::app::core::player::Player;
-use crate::app::debug::rand_cubes::generate_random_cubes;
 use crate::app::input::keyboard_handler::{KeyboardCommand, KeyboardHandler};
 use crate::app::input::mouse_handler::MouseCommand;
 use crate::app::utils::physics::PhysicsContext;
@@ -19,12 +17,13 @@ pub enum GameState {
     WorldState,
 }
 
+// For later state stacking
 pub enum StateTransition {
-    None,                       // Ничего не делать
-    SwitchTo(GameState),        // Сменить на другое состояние
-    Push(Box<dyn EngineState>), // Добавить в стек (пауза)
-    Pop,                        // Убрать из стека
-    Quit,                       // Выйти из игры
+    None,
+    SwitchTo(GameState),
+    Push(Box<dyn EngineState>),
+    Pop,
+    Quit,
 }
 
 #[enum_dispatch]
@@ -42,6 +41,12 @@ pub trait EngineState {
     fn get_cubes(&self) -> Option<&[Cube]> {
         None
     }
+    fn get_meshes_path(&self) -> Option<&String> {
+        None
+    }
+    fn get_mesh_states(&self) -> Option<&HashMap<String, Vec<MeshState>>> {
+        None
+    }
     fn get_camera(&self) -> Option<&Camera> {
         None
     }
@@ -56,6 +61,8 @@ pub trait EngineState {
             cubes: self.get_cubes(),
             ui_objects: sorted_by_z,
             camera: self.get_camera(),
+            meshes_path: self.get_meshes_path(),
+            mesh_states: self.get_mesh_states(),
         }
     }
 
@@ -83,19 +90,19 @@ impl MenuState {
                 UIObject::default()
                     .position(0.0, 0.0, 0.0)
                     .size(200, 200)
-                    .bg_color(255, 0, 0, 100),
+                    .bg_color(255.0, 0.0, 0.0, 100.0),
                 UIObject::default()
                     .position(200.0, 0.0, 0.0)
                     .size(200, 200)
-                    .bg_color(0, 255, 0, 100),
+                    .bg_color(0.0, 255.0, 0.0, 100.0),
                 UIObject::default()
                     .position(0.0, 200.0, 0.0)
                     .size(200, 200)
-                    .bg_color(0, 0, 255, 100),
+                    .bg_color(0.0, 0.0, 255.0, 100.0),
                 UIObject::default()
                     .position(200.0, 200.0, 0.0)
                     .size(200, 200)
-                    .bg_color(255, 255, 255, 100),
+                    .bg_color(255.0, 255.0, 255.0, 100.0),
             ],
             hovered_index: None,
         }
@@ -143,7 +150,9 @@ impl EngineState for MenuState {
                 if *index == 0 {
                     return StateTransition::SwitchTo(GameState::from(WorldState::new()));
                 } else {
-                    self.ui_objects[*index].bg_color.change_by(10, 10, 10, 0);
+                    self.ui_objects[*index]
+                        .bg_color
+                        .change_by(10.0, 10.0, 10.0, 0.0);
                 }
             }
             _ => {}
@@ -156,7 +165,9 @@ impl EngineState for MenuState {
 pub struct WorldState {
     player: Player,
     ui_objects: Vec<UIObject>,
-    cube_objects: Vec<Cube>,
+    //cube_objects: Vec<Cube>,
+    meshes_path: String,
+    mesh_states: HashMap<String, Vec<MeshState>>,
     logger: &'static Logger,
 }
 
@@ -184,10 +195,30 @@ impl WorldState {
                 UIObject::default()
                     .position(200.0, 500.0, 0.0)
                     .size(400, 100)
-                    .bg_color(100, 100, 100, 100),
+                    .bg_color(100.0, 100.0, 100.0, 100.0),
             ],
-
-            cube_objects: generate_random_cubes(1000),
+            meshes_path: String::from("res/meshes/glb/basicmesh.glb"),
+            mesh_states: HashMap::from([
+                (
+                    String::from("Cube"),
+                    vec![
+                        MeshState::default()
+                            .position(5.0, 5.0, 5.0)
+                            .size(10.0, 2.0, 2.0),
+                        MeshState::default()
+                            .position(5.0, -5.0, 5.0)
+                            .size(10.0, 2.0, 5.0),
+                    ],
+                ),
+                (
+                    String::from("Suzanne"),
+                    vec![
+                        MeshState::default()
+                            .position(-10.0, -5.0, -5.0)
+                            .size(4.0, 4.0, 4.0),
+                    ],
+                ),
+            ]), //cube_objects: generate_random_cubes(1000),
         }
     }
 }
@@ -196,14 +227,14 @@ impl EngineState for WorldState {
     fn ui_capacity(&self) -> usize {
         self.ui_objects.len()
     }
-    fn cube_capacity(&self) -> usize {
-        self.cube_objects.len()
-    }
     fn get_ui(&self) -> Option<&Vec<UIObject>> {
         Some(&self.ui_objects)
     }
-    fn get_cubes(&self) -> Option<&[Cube]> {
-        Some(&self.cube_objects)
+    fn get_meshes_path(&self) -> Option<&String> {
+        Some(&self.meshes_path)
+    }
+    fn get_mesh_states(&self) -> Option<&HashMap<String, Vec<MeshState>>> {
+        Some(&self.mesh_states)
     }
     fn get_camera(&self) -> Option<&Camera> {
         Some(&self.player.camera)

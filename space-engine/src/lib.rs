@@ -12,17 +12,18 @@ use window_renderer::WindowRenderer;
 
 pub mod core;
 
-pub mod render;
+mod render;
 
 pub mod utils;
+use utils::RenderingContext;
 
 mod resources;
-
 use std::sync::Arc;
 use std::time::Instant;
 
 use anyhow::Result;
 use ash::vk;
+use resources::ResourceManager;
 use winit::window::Window;
 
 pub struct Engine {
@@ -30,6 +31,7 @@ pub struct Engine {
     context: Arc<VulkanContext>,
     pub window: Arc<Window>,
     logger: &'static Logger,
+    resource_manager: ResourceManager,
 }
 
 impl Engine {
@@ -72,7 +74,10 @@ impl Engine {
             LogLevel::Success,
         );
 
+        let resource_manager = ResourceManager::new(context.clone())?;
+
         Ok(Self {
+            resource_manager,
             window_renderer,
             window,
             context,
@@ -80,7 +85,9 @@ impl Engine {
         })
     }
 
-    pub fn request_redraw(&mut self) {
-        self.window.request_redraw();
+    pub fn request_redraw(&mut self, rendering_context: RenderingContext) {
+        self.window_renderer
+            .render(rendering_context, &mut self.resource_manager)
+            .expect("Failed to draw the renderer");
     }
 }

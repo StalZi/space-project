@@ -1,9 +1,8 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
+use std::sync::Arc;
 
 use anyhow::Result;
-
 use ash::vk;
-
 use gpu_allocator::MemoryLocation;
 use gpu_allocator::vulkan::AllocationScheme;
 

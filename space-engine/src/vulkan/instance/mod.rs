@@ -1,10 +1,9 @@
 mod get_wm_name;
-use get_wm_name::get_window_manager;
-
 use std::ffi::CStr;
 
-use ash::{Entry, vk, vk::API_VERSION_1_0};
-
+use ash::vk::API_VERSION_1_0;
+use ash::{Entry, vk};
+use get_wm_name::get_window_manager;
 use winit::raw_window_handle::RawDisplayHandle;
 
 use crate::logger::{LogLevel, Logger};

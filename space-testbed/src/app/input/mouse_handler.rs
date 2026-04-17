@@ -1,4 +1,4 @@
-use space_engine::utils::{Point3D, Rotation3D, Size};
+use space_engine::utils::{Point3D, Rotation3D, Size2D};
 use winit::dpi::PhysicalPosition;
 use winit::event::{ElementState, WindowEvent};
 
@@ -27,7 +27,7 @@ impl MouseHandler {
         &self,
         position: &PhysicalPosition<f64>,
         object_pos: Point3D,
-        object_size: Size,
+        object_size: Size2D,
     ) -> bool {
         (position.x > object_pos.x as f64)
             && (position.x < (object_pos.x + object_size.width as f32) as f64)
@@ -42,7 +42,12 @@ impl MouseHandler {
         }
     }
 
-    pub fn handle_motion_event(&mut self, delta: (f64, f64), mouse_sensitivity: f32, state: &GameState) -> MouseCommand {
+    pub fn handle_motion_event(
+        &mut self,
+        delta: (f64, f64),
+        mouse_sensitivity: f32,
+        state: &GameState,
+    ) -> MouseCommand {
         match state {
             GameState::MenuState(_) => MouseCommand::None,
             GameState::WorldState(_) => MouseCommand::RotateCamera(Rotation3D {

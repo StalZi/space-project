@@ -1,7 +1,5 @@
-use ash::Device;
-use ash::vk;
-
 use anyhow::Result;
+use ash::{Device, vk};
 
 fn create_shader_module(device: &Device, code: &[u8]) -> Result<vk::ShaderModule> {
     let mut code = std::io::Cursor::new(code);

@@ -6,22 +6,22 @@ fn main() {
     let workspace_root = manifest_dir.parent().expect("workspace root not found");
 
     // Tell Cargo to rerun this script if the shader source files change.
-    println!(
-        "cargo:rerun-if-changed={}",
-        manifest_dir.join("res/shaders/scene/shader.vert").display()
-    );
-    println!(
-        "cargo:rerun-if-changed={}",
-        manifest_dir.join("res/shaders/scene/shader.frag").display()
-    );
-    println!(
-        "cargo:rerun-if-changed={}",
-        manifest_dir.join("res/shaders/ui/shader.vert").display()
-    );
-    println!(
-        "cargo:rerun-if-changed={}",
-        manifest_dir.join("res/shaders/ui/shader.frag").display()
-    );
+    //println!(
+    //    "cargo:rerun-if-changed={}",
+    //    manifest_dir.join("res/shaders/scene/mesh/mesh.vert").display()
+    //);
+    //println!(
+    //    "cargo:rerun-if-changed={}",
+    //    manifest_dir.join("res/shaders/scene/mesh/mesh.frag").display()
+    //);
+    //println!(
+    //    "cargo:rerun-if-changed={}",
+    //    manifest_dir.join("res/shaders/ui/shader.vert").display()
+    //);
+    //println!(
+    //    "cargo:rerun-if-changed={}",
+    //    manifest_dir.join("res/shaders/ui/shader.frag").display()
+    //);
 
     // Create a new shaderc compiler instance.
     // The `unwrap()` is safe here because it will only fail if the native library cannot be loaded.
@@ -39,14 +39,14 @@ fn main() {
     // The source shader files are expected in the space-engine crate's res/shaders directory.
     let shader_paths = [
         (
-            manifest_dir.join("res/shaders/scene/shader.vert"),
+            manifest_dir.join("res/shaders/scene/mesh/mesh.vert"),
             shaderc::ShaderKind::Vertex,
-            "scene/compiled/vert.spv",
+            "scene/mesh/compiled/vert.spv",
         ),
         (
-            manifest_dir.join("res/shaders/scene/shader.frag"),
+            manifest_dir.join("res/shaders/scene/mesh/mesh.frag"),
             shaderc::ShaderKind::Fragment,
-            "scene/compiled/frag.spv",
+            "scene/mesh/compiled/frag.spv",
         ),
         (
             manifest_dir.join("res/shaders/ui/shader.vert"),

@@ -1,11 +1,10 @@
 use crate::logger::{LogLevel, Logger};
+use crate::resources::ResourceManager;
 
 mod dynamic_rendering;
-
-pub mod context;
 use dynamic_rendering::begin_rendering;
 
-use crate::render::context::RenderingContext;
+use crate::utils::RenderingContext;
 
 pub mod ui;
 use ui::UIRenderer;
@@ -109,8 +108,7 @@ impl GameRenderer {
             .collect::<Result<Vec<_>>>()?;
 
         logger.log("Creating scene renderer", LogLevel::Info);
-        let scene_renderer =
-            SceneRenderer::new(context.clone(), resolution, format, &mut allocator)?;
+        let scene_renderer = SceneRenderer::new(context.clone(), resolution, format)?;
 
         logger.log("Creating UI renderer", LogLevel::Info);
         let ui_renderer = UIRenderer::new(
@@ -174,7 +172,8 @@ impl GameRenderer {
         command_buffer: vk::CommandBuffer,
         clear_color: vk::ClearColorValue,
         render_target_index: usize,
-        context: &RenderingContext,
+        context: RenderingContext,
+        resource_manager: &mut ResourceManager,
     ) -> Result<()> {
         let render_target = &mut self.render_targets[render_target_index];
 
@@ -189,12 +188,14 @@ impl GameRenderer {
                 height: render_target.attributes.extent.height,
             }),
         );
-
-        if let Some(cube_objects) = context.cubes {
+        if let (Some(meshes_path), Some(mesh_states)) = (context.meshes_path, context.mesh_states) {
+            let meshes_info =
+                resource_manager.get_or_init_meshes(meshes_path, &mut self.allocator)?;
             self.scene_renderer.draw(
                 command_buffer,
                 render_target,
-                cube_objects,
+                meshes_info,
+                mesh_states,
                 context.camera,
             )?;
         }
